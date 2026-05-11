@@ -1,0 +1,131 @@
+asyncapi: '2.6.0'
+id: 'urn:northwick:security:findings'
+info:
+  title: Security findings
+  version: '1.0.0'
+  description: |
+    Findings emitted by the security scanners (semgrep, gitleaks, osv, trivy).
+    One message per finding per scan. A finding that is still present on the
+    next scan is emitted again with a new `id` and the same `fingerprint`.
+  contact:
+    name: Security platform
+    email: sec-platform@northwick.example
+defaultContentType: application/json
+servers:
+  production:
+    url: nats.messaging.svc:4222
+    protocol: nats
+    description: JetStream stream FINDINGS captures findings.>
+channels:
+  findings.{scanner}:
+    description: Findings from one scanner.
+    parameters:
+      scanner:
+        description: The scanner that produced the finding.
+        schema:
+          type: string
+          enum: [semgrep, gitleaks, osv, trivy]
+    subscribe:
+      operationId: receiveFinding
+      summary: Scanners publish findings here; consumers receive them.
+      message:
+        $ref: '#/components/messages/Finding'
+components:
+  messages:
+    Finding:
+      name: Finding
+      title: Security finding
+      contentType: application/json
+      headers:
+        type: object
+        required: [Nats-Msg-Id, Content-Type]
+        properties:
+          Nats-Msg-Id:
+            type: string
+            format: uuid
+            description: Equal to the payload `id`. Used by JetStream to drop repeated publishes within the stream's duplicate window.
+          Content-Type:
+            type: string
+            const: application/json
+      payload:
+        $ref: '#/components/schemas/Finding'
+      examples:
+        - name: semgrep-medium
+          summary: A semgrep finding in a service repository.
+          headers:
+            Nats-Msg-Id: 6f1d2c34-8a7b-4e0f-9b21-3c5d7e8f9a01
+            Content-Type: application/json
+          payload:
+            id: 6f1d2c34-8a7b-4e0f-9b21-3c5d7e8f9a01
+            fingerprint: 3b8e5f0a9c2d4e6f8a1b3c5d7e9f0a2b4c6d8e0f
+            scanner: semgrep
+            rule: go.lang.security.audit.net.use-tls.use-tls
+            severity: medium
+            repo: northwick/merchant-portal
+            path: internal/server/server.go
+            line: 88
+            title: HTTP server started without TLS
+            description: Found an HTTP server without TLS. Use 'http.ListenAndServeTLS' instead.
+            evidence:
+              match: 'http.ListenAndServe(addr, mux)'
+              context: |
+                	log.Info("listening", "addr", addr)
+                	return http.ListenAndServe(addr, mux)
+                }
+            emitted_at: '2026-10-19T02:14:07Z'
+  schemas:
+    Finding:
+      type: object
+      additionalProperties: false
+      required: [id, fingerprint, scanner, rule, severity, repo, path, line, title, description, evidence, emitted_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique per emission. A re-scan that finds the same issue emits a new id.
+        fingerprint:
+          type: string
+          pattern: '^[0-9a-f]{40}$'
+          description: Stable identity of the finding across re-scans, derived from scanner, rule, repo, path and the normalised match.
+        scanner:
+          type: string
+          enum: [semgrep, gitleaks, osv, trivy]
+          description: The scanner that produced the finding. Matches the subject token.
+        rule:
+          type: string
+          description: The scanner's own rule id.
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+          description: Severity as assigned by the scanner rule.
+        repo:
+          type: string
+          pattern: '^northwick/[a-z0-9-]+$'
+          description: Repository, as northwick/<name>.
+        path:
+          type: string
+          description: File path relative to the repository root.
+        line:
+          type: integer
+          minimum: 1
+          description: 1-based line number of the match.
+        title:
+          type: string
+          description: Short human-readable title from the rule.
+        description:
+          type: string
+          description: Free text from the scanner. Not validated; treat as untrusted input.
+        evidence:
+          type: object
+          required: [match, context]
+          properties:
+            match:
+              type: string
+              description: The matched text, verbatim.
+            context:
+              type: string
+              description: The lines surrounding the match.
+        emitted_at:
+          type: string
+          format: date-time
+          description: When the scanner emitted the finding (RFC 3339, UTC).
