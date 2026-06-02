@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync"
 	"time"
 
 	"northwick.example/finding-relay/internal/chat"
@@ -27,11 +28,14 @@ type Handler struct {
 	log     *slog.Logger
 	tickets *ticket.Client
 	chat    *chat.Client
+
+	mu   sync.Mutex
+	seen map[string]string
 }
 
 // NewHandler wires a Handler.
 func NewHandler(log *slog.Logger, tickets *ticket.Client, chat *chat.Client) *Handler {
-	return &Handler{log: log, tickets: tickets, chat: chat}
+	return &Handler{log: log, tickets: tickets, chat: chat, seen: map[string]string{}}
 }
 
 // Handle processes a single finding message.
@@ -43,6 +47,13 @@ func (h *Handler) Handle(ctx context.Context, m Msg) {
 		return
 	}
 	h.log.Info("finding received", "finding", f)
+	h.mu.Lock()
+	_, seen := h.seen[f.Fingerprint]
+	h.mu.Unlock()
+	if seen {
+		_ = m.Ack()
+		return
+	}
 	id, err := h.tickets.Create(ctx, ticket.FromFinding(f))
 	if err != nil {
 		if errors.Is(err, ticket.ErrRateLimited) {
@@ -58,5 +69,8 @@ func (h *Handler) Handle(ctx context.Context, m Msg) {
 		_ = m.Nak()
 		return
 	}
+	h.mu.Lock()
+	h.seen[f.Fingerprint] = id
+	h.mu.Unlock()
 	_ = m.Ack()
 }
