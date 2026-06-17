@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 
+	"northwick.example/finding-relay/internal/admin"
 	"northwick.example/finding-relay/internal/chat"
 	"northwick.example/finding-relay/internal/config"
 	"northwick.example/finding-relay/internal/relay"
@@ -85,6 +87,28 @@ func run(log *slog.Logger) error {
 	if err := ensureConsumer(nats.DeliverAllPolicy); err != nil {
 		return err
 	}
+
+	replay := func(context.Context) error {
+		if err := js.DeleteConsumer(cfg.Stream, cfg.Consumer); err != nil {
+			return err
+		}
+		_, err := js.AddConsumer(cfg.Stream, &nats.ConsumerConfig{
+			Durable:       cfg.Consumer,
+			AckPolicy:     nats.AckExplicitPolicy,
+			AckWait:       30 * time.Second,
+			FilterSubject: cfg.Subjects,
+			DeliverPolicy: nats.DeliverAllPolicy,
+		})
+		return err
+	}
+
+	srv := &http.Server{Addr: cfg.HTTPAddr, Handler: admin.New(cfg.AdminToken, replay)}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("admin server", "err", err)
+		}
+	}()
+	defer srv.Close()
 
 	h := relay.NewHandler(log, ticket.New(cfg.TicketsURL, cfg.TicketsTok), chat.New(cfg.ChatWebhook))
 	subscribe := func() (*nats.Subscription, error) {
