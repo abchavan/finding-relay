@@ -25,17 +25,18 @@ type Msg interface {
 
 // Handler processes one message at a time.
 type Handler struct {
-	log     *slog.Logger
-	tickets *ticket.Client
-	chat    *chat.Client
+	log        *slog.Logger
+	tickets    *ticket.Client
+	chat       *chat.Client
+	suppressed map[string]bool
 
 	mu   sync.Mutex
 	seen map[string]string
 }
 
 // NewHandler wires a Handler.
-func NewHandler(log *slog.Logger, tickets *ticket.Client, chat *chat.Client) *Handler {
-	return &Handler{log: log, tickets: tickets, chat: chat, seen: map[string]string{}}
+func NewHandler(log *slog.Logger, tickets *ticket.Client, chat *chat.Client, suppressed map[string]bool) *Handler {
+	return &Handler{log: log, tickets: tickets, chat: chat, suppressed: suppressed, seen: map[string]string{}}
 }
 
 // Handle processes a single finding message.
@@ -47,6 +48,10 @@ func (h *Handler) Handle(ctx context.Context, m Msg) {
 		return
 	}
 	h.log.Info("finding received", "finding", f)
+	if h.suppressed[f.Fingerprint] {
+		_ = m.Ack()
+		return
+	}
 	h.mu.Lock()
 	_, seen := h.seen[f.Fingerprint]
 	h.mu.Unlock()

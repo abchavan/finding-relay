@@ -17,6 +17,7 @@ type Config struct {
 	TicketsURL  string
 	TicketsTok  string
 	ChatWebhook string
+	Suppress    string
 	AdminToken  string
 	HTTPAddr    string
 	Batch       int
@@ -34,6 +35,7 @@ func Load() Config {
 		TicketsURL:  get("TICKETS_URL", ""),
 		TicketsTok:  get("TICKETS_TOKEN", ""),
 		ChatWebhook: get("CHAT_WEBHOOK_URL", ""),
+		Suppress:    get("SUPPRESS_FINGERPRINTS", ""),
 		AdminToken:  get("ADMIN_TOKEN", "changeme"),
 		HTTPAddr:    get("HTTP_ADDR", ":8080"),
 		Batch:       getInt("BATCH", 10),
