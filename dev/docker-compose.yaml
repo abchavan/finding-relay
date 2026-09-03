@@ -1,0 +1,73 @@
+name: finding-relay
+
+services:
+  nats:
+    image: nats:2.10-alpine
+    command: ["-c", "/etc/nats/nats.conf"]
+    volumes:
+      - ./nats/nats.conf:/etc/nats/nats.conf:ro
+      - nats-data:/data
+    ports:
+      - "${NATS_PORT:-4222}:4222"
+      - "${NATS_MONITOR_PORT:-8222}:8222"
+
+  ticket-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        TARGET: ./dev/ticket-api
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "/app", "-healthcheck"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  chat-sink:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        TARGET: ./dev/chat-sink
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD", "/app", "-healthcheck"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  relay:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      NATS_URL: nats://nats:4222
+      NATS_USER: relay
+      NATS_PASSWORD: relay-dev-J7vT3nRq9L
+      STREAM: FINDINGS
+      CONSUMER: finding-relay
+      SUBJECTS: "findings.>"
+      TICKETS_URL: http://ticket-api:8081
+      TICKETS_TOKEN: nwk-tickets-dev-5Hc2Yd8Mv1
+      CHAT_WEBHOOK_URL: http://chat-sink:8082/hooks/T0K3N-dev-8Fq2Lw
+      HTTP_ADDR: ":8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      nats:
+        condition: service_started
+      ticket-api:
+        condition: service_healthy
+      chat-sink:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  nats-data:
