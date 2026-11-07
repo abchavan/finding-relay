@@ -70,39 +70,44 @@ func run(log *slog.Logger) error {
 		return err
 	}
 
-	ensureConsumer := func(policy nats.DeliverPolicy) error {
-		if _, err := js.ConsumerInfo(cfg.Stream, cfg.Consumer); err == nil {
-			return nil
-		} else if !errors.Is(err, nats.ErrConsumerNotFound) {
-			return err
-		}
-		_, err := js.AddConsumer(cfg.Stream, &nats.ConsumerConfig{
+	consumerConfig := func(policy nats.DeliverPolicy, start *time.Time) *nats.ConsumerConfig {
+		return &nats.ConsumerConfig{
 			Durable:       cfg.Consumer,
 			AckPolicy:     nats.AckExplicitPolicy,
 			AckWait:       30 * time.Second,
 			FilterSubject: cfg.Subjects,
 			DeliverPolicy: policy,
-		})
-		return err
+			OptStartTime:  start,
+		}
 	}
-	if err := ensureConsumer(nats.DeliverAllPolicy); err != nil {
-		return err
-	}
-
-	replay := func(context.Context) error {
-		if err := js.DeleteConsumer(cfg.Stream, cfg.Consumer); err != nil {
+	ensureConsumer := func() error {
+		if _, err := js.ConsumerInfo(cfg.Stream, cfg.Consumer); err == nil {
+			return nil
+		} else if !errors.Is(err, nats.ErrConsumerNotFound) {
 			return err
 		}
-		_, err := js.AddConsumer(cfg.Stream, &nats.ConsumerConfig{
-			Durable:       cfg.Consumer,
-			AckPolicy:     nats.AckExplicitPolicy,
-			AckWait:       30 * time.Second,
-			FilterSubject: cfg.Subjects,
-			DeliverPolicy: nats.DeliverAllPolicy,
-		})
+		_, err := js.AddConsumer(cfg.Stream, consumerConfig(nats.DeliverAllPolicy, nil))
+		return err
+	}
+	if err := ensureConsumer(); err != nil {
 		return err
 	}
 
+	replay := func(_ context.Context, since time.Time) (time.Time, error) {
+		info, err := js.StreamInfo(cfg.Stream)
+		if err != nil {
+			return time.Time{}, err
+		}
+		if err := js.DeleteConsumer(cfg.Stream, cfg.Consumer); err != nil && !errors.Is(err, nats.ErrConsumerNotFound) {
+			return time.Time{}, err
+		}
+		_, err = js.AddConsumer(cfg.Stream, consumerConfig(nats.DeliverByStartTimePolicy, &since))
+		return info.State.FirstTime, err
+	}
+
+	if cfg.AdminToken == "" {
+		log.Warn("ADMIN_TOKEN not set, replay endpoint disabled")
+	}
 	srv := &http.Server{Addr: cfg.HTTPAddr, Handler: admin.New(cfg.AdminToken, replay)}
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -128,7 +133,7 @@ func run(log *slog.Logger) error {
 			}
 			log.Warn("fetch failed, resubscribing", "err", err)
 			time.Sleep(time.Second)
-			if err := ensureConsumer(nats.DeliverAllPolicy); err != nil {
+			if err := ensureConsumer(); err != nil {
 				log.Error("ensure consumer", "err", err)
 				continue
 			}

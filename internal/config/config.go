@@ -38,7 +38,7 @@ func Load() Config {
 		TicketsRPS:  getFloat("TICKETS_RPS", 4),
 		ChatWebhook: get("CHAT_WEBHOOK_URL", ""),
 		Suppress:    get("SUPPRESS_FINGERPRINTS", ""),
-		AdminToken:  get("ADMIN_TOKEN", "changeme"),
+		AdminToken:  get("ADMIN_TOKEN", ""),
 		HTTPAddr:    get("HTTP_ADDR", ":8080"),
 		Batch:       getInt("BATCH", 1),
 	}
