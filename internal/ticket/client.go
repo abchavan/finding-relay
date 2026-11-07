@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -29,7 +30,7 @@ type Ticket struct {
 // FromFinding maps a finding to a ticket.
 func FromFinding(f finding.Finding) Ticket {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s:%d\n\n%s\n\nMatch:\n%s\n", f.Path, f.Line, f.Description, f.Evidence.Match)
+	fmt.Fprintf(&b, "%s:%d\n\n%s\n\nMatch:\n%s\n", f.Path, f.Line, f.Description, f.SafeMatch())
 	return Ticket{
 		Title:       f.Title,
 		Body:        b.String(),
@@ -41,14 +42,52 @@ func FromFinding(f finding.Finding) Ticket {
 
 // Client creates tickets.
 type Client struct {
-	url   string
-	token string
-	http  *http.Client
+	url     string
+	token   string
+	http    *http.Client
+	limiter *limiter
 }
 
-// New returns a Client for the platform at url.
-func New(url, token string) *Client {
-	return &Client{url: strings.TrimRight(url, "/"), token: token, http: &http.Client{Timeout: 5 * time.Second}}
+// New returns a Client for the platform at baseURL. perSecond caps the
+// request rate of this client; 0 disables the cap.
+func New(baseURL, token string, perSecond float64) *Client {
+	return &Client{
+		url:     strings.TrimRight(baseURL, "/"),
+		token:   token,
+		http:    &http.Client{Timeout: 5 * time.Second},
+		limiter: newLimiter(perSecond),
+	}
+}
+
+// FindByExternalRef returns the id of an existing ticket with the given
+// external_ref, or "" if there is none.
+func (c *Client) FindByExternalRef(ctx context.Context, ref string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.url+"/tickets?external_ref="+url.QueryEscape(ref), nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := c.do(ctx, req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if err := checkStatus(resp, "search"); err != nil {
+		return "", err
+	}
+	var out []struct {
+		ID          string `json:"id"`
+		ExternalRef string `json:"external_ref"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return "", fmt.Errorf("ticket: decode search response: %w", err)
+	}
+	// Match on the field as well, in case the filter is not applied server side.
+	for _, t := range out {
+		if t.ExternalRef == ref {
+			return t.ID, nil
+		}
+	}
+	return "", nil
 }
 
 // Create posts a ticket and returns its id.
@@ -62,17 +101,13 @@ func (c *Client) Create(ctx context.Context, t Ticket) (string, error) {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	resp, err := c.http.Do(req)
+	resp, err := c.do(ctx, req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return "", ErrRateLimited
-	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return "", fmt.Errorf("ticket: create failed: status %d", resp.StatusCode)
+	if err := checkStatus(resp, "create"); err != nil {
+		return "", err
 	}
 	var out struct {
 		ID string `json:"id"`
@@ -81,4 +116,22 @@ func (c *Client) Create(ctx context.Context, t Ticket) (string, error) {
 		return "", fmt.Errorf("ticket: decode response: %w", err)
 	}
 	return out.ID, nil
+}
+
+func (c *Client) do(ctx context.Context, req *http.Request) (*http.Response, error) {
+	if err := c.limiter.wait(ctx); err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	return c.http.Do(req)
+}
+
+func checkStatus(resp *http.Response, op string) error {
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return ErrRateLimited
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("ticket: %s failed: status %d", op, resp.StatusCode)
+	}
+	return nil
 }

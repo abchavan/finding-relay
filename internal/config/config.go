@@ -16,6 +16,7 @@ type Config struct {
 	Subjects    string
 	TicketsURL  string
 	TicketsTok  string
+	TicketsRPS  float64
 	ChatWebhook string
 	Suppress    string
 	AdminToken  string
@@ -34,11 +35,12 @@ func Load() Config {
 		Subjects:    get("SUBJECTS", "findings.>"),
 		TicketsURL:  get("TICKETS_URL", ""),
 		TicketsTok:  get("TICKETS_TOKEN", ""),
+		TicketsRPS:  getFloat("TICKETS_RPS", 4),
 		ChatWebhook: get("CHAT_WEBHOOK_URL", ""),
 		Suppress:    get("SUPPRESS_FINGERPRINTS", ""),
 		AdminToken:  get("ADMIN_TOKEN", "changeme"),
 		HTTPAddr:    get("HTTP_ADDR", ":8080"),
-		Batch:       getInt("BATCH", 10),
+		Batch:       getInt("BATCH", 1),
 	}
 }
 
@@ -51,6 +53,13 @@ func get(key, def string) string {
 
 func getInt(key string, def int) int {
 	if v, err := strconv.Atoi(os.Getenv(key)); err == nil && v > 0 {
+		return v
+	}
+	return def
+}
+
+func getFloat(key string, def float64) float64 {
+	if v, err := strconv.ParseFloat(os.Getenv(key), 64); err == nil && v > 0 {
 		return v
 	}
 	return def

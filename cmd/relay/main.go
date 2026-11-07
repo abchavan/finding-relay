@@ -33,6 +33,7 @@ func (n natsMsg) Term() error { return n.m.Term() }
 
 func main() {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(log)
 	if err := run(log); err != nil {
 		log.Error("relay stopped", "err", err)
 		os.Exit(1)
@@ -110,7 +111,7 @@ func run(log *slog.Logger) error {
 	}()
 	defer srv.Close()
 
-	h := relay.NewHandler(log, ticket.New(cfg.TicketsURL, cfg.TicketsTok), chat.New(cfg.ChatWebhook), relay.ParseSuppress(cfg.Suppress))
+	h := relay.NewHandler(log, ticket.New(cfg.TicketsURL, cfg.TicketsTok, cfg.TicketsRPS), chat.New(cfg.ChatWebhook), relay.ParseSuppress(cfg.Suppress))
 	subscribe := func() (*nats.Subscription, error) {
 		return js.PullSubscribe(cfg.Subjects, cfg.Consumer, nats.Bind(cfg.Stream, cfg.Consumer))
 	}
