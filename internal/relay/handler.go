@@ -14,7 +14,10 @@ import (
 )
 
 const (
-	retryDelay     = 10 * time.Second
+	// retryDelay is longer than the ticket client's create timeout, so a
+	// create that is still running on the platform has finished before the
+	// retry looks the ticket up.
+	retryDelay     = 30 * time.Second
 	rateLimitDelay = 5 * time.Second
 )
 

@@ -15,6 +15,15 @@ import (
 	"northwick.example/finding-relay/internal/finding"
 )
 
+// Creates have been seen to take 14s on the platform side while it stays
+// healthy (2026-10-15). Giving up earlier than that just opens a second
+// ticket on retry. Search, create and the chat post together stay inside the
+// consumer's 30s AckWait.
+const (
+	searchTimeout = 5 * time.Second
+	createTimeout = 15 * time.Second
+)
+
 // ErrRateLimited is returned when the platform answers 429.
 var ErrRateLimited = errors.New("ticket: rate limited")
 
@@ -54,7 +63,7 @@ func New(baseURL, token string, perSecond float64) *Client {
 	return &Client{
 		url:     strings.TrimRight(baseURL, "/"),
 		token:   token,
-		http:    &http.Client{Timeout: 5 * time.Second},
+		http:    &http.Client{},
 		limiter: newLimiter(perSecond),
 	}
 }
@@ -62,6 +71,8 @@ func New(baseURL, token string, perSecond float64) *Client {
 // FindByExternalRef returns the id of an existing ticket with the given
 // external_ref, or "" if there is none.
 func (c *Client) FindByExternalRef(ctx context.Context, ref string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, searchTimeout)
+	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.url+"/tickets?external_ref="+url.QueryEscape(ref), nil)
 	if err != nil {
 		return "", err
@@ -96,6 +107,8 @@ func (c *Client) Create(ctx context.Context, t Ticket) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url+"/tickets", bytes.NewReader(payload))
 	if err != nil {
 		return "", err
