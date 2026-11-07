@@ -58,6 +58,7 @@ All configuration is environment variables.
 | `ADMIN_TOKEN` | (empty) | token for the admin endpoint; replay is disabled when empty |
 | `HTTP_ADDR` | `:8080` | health check and admin endpoint |
 | `BATCH` | `1` | messages per pull |
+| `CONTRACT_VERSION` | `1` | findings contract to ticket (`1` or `2`); messages in the other version are acked without a ticket |
 | `TICKETS_RPS` | `4` | requests per second to the ticket API from this pod. The platform limit (5/s) is per token, so split it across replicas |
 
 ## Admin endpoint

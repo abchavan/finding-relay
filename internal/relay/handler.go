@@ -43,6 +43,11 @@ type Handler struct {
 	chat       *chat.Client
 	suppressed map[string]bool
 
+	// Contract is the findings contract version this relay tickets (1 or 2).
+	// Messages in the other version are acked without a ticket: while the
+	// scanners dual-publish, every finding arrives in both.
+	Contract int
+
 	mu      sync.Mutex
 	done    map[string]string // fingerprint -> ticket id, ticket and chat both sent
 	pending map[string]string // fingerprint -> ticket id ("" if the create outcome is unknown), chat post still owed
@@ -51,7 +56,7 @@ type Handler struct {
 // NewHandler wires a Handler.
 func NewHandler(log *slog.Logger, tickets *ticket.Client, chat *chat.Client, suppressed map[string]bool) *Handler {
 	return &Handler{
-		log: log, tickets: tickets, chat: chat, suppressed: suppressed,
+		log: log, tickets: tickets, chat: chat, suppressed: suppressed, Contract: 1,
 		done: map[string]string{}, pending: map[string]string{},
 	}
 }
@@ -71,9 +76,14 @@ func (h *Handler) Handle(ctx context.Context, m Msg) {
 	}
 	log := h.log.With("fingerprint", f.Fingerprint, "id", f.ID, "scanner", f.Scanner,
 		"severity", f.Severity, "repo", f.Repo)
+	if f.Version != h.Contract {
+		log.Debug("finding in another contract version, skipped", "version", f.Version)
+		_ = m.Ack()
+		return
+	}
 	log.Info("finding received")
 
-	if h.suppressed[f.Fingerprint] {
+	if h.suppressed[f.Fingerprint] || (f.LegacyFingerprint != "" && h.suppressed[f.LegacyFingerprint]) {
 		log.Info("finding suppressed")
 		_ = m.Ack()
 		return
@@ -85,7 +95,7 @@ func (h *Handler) Handle(ctx context.Context, m Msg) {
 
 	id, owed := h.pendingChat(f.Fingerprint)
 	if id == "" {
-		id, err = h.tickets.FindByExternalRef(ctx, f.Fingerprint)
+		id, err = h.findTicket(ctx, f)
 		if err != nil {
 			h.retry(log, m, "ticket lookup failed", err)
 			return
@@ -120,6 +130,17 @@ func (h *Handler) Handle(ctx context.Context, m Msg) {
 	}
 	h.markDone(f.Fingerprint, id)
 	_ = m.Ack()
+}
+
+// findTicket looks the finding up by fingerprint and, for a v2 finding that
+// carries its v1 fingerprint, by that too: tickets opened before the contract
+// change have the v1 fingerprint as external_ref.
+func (h *Handler) findTicket(ctx context.Context, f finding.Finding) (string, error) {
+	id, err := h.tickets.FindByExternalRef(ctx, f.Fingerprint)
+	if err != nil || id != "" || f.LegacyFingerprint == "" {
+		return id, err
+	}
+	return h.tickets.FindByExternalRef(ctx, f.LegacyFingerprint)
 }
 
 func (h *Handler) retry(log *slog.Logger, m Msg, msg string, err error) {

@@ -22,6 +22,7 @@ type Config struct {
 	AdminToken  string
 	HTTPAddr    string
 	Batch       int
+	Contract    int
 }
 
 // Load builds a Config from environment variables.
@@ -41,6 +42,7 @@ func Load() Config {
 		AdminToken:  get("ADMIN_TOKEN", ""),
 		HTTPAddr:    get("HTTP_ADDR", ":8080"),
 		Batch:       getInt("BATCH", 1),
+		Contract:    getInt("CONTRACT_VERSION", 1),
 	}
 }
 

@@ -38,8 +38,12 @@ type Ticket struct {
 
 // FromFinding maps a finding to a ticket.
 func FromFinding(f finding.Finding) Ticket {
+	evidence := "Match:\n" + f.SafeMatch()
+	if f.MatchRef != "" {
+		evidence = "Evidence: " + f.MatchRef
+	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s:%d\n\n%s\n\nMatch:\n%s\n", f.Path, f.Line, f.Description, f.SafeMatch())
+	fmt.Fprintf(&b, "%s:%d\n\n%s\n\n%s\n", f.Path, f.Line, f.Description, evidence)
 	return Ticket{
 		Title:       f.Title,
 		Body:        b.String(),

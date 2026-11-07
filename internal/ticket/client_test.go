@@ -120,3 +120,13 @@ func TestClientRespectsRate(t *testing.T) {
 		t.Fatalf("5 requests took %v, limiter not applied", d)
 	}
 }
+
+func TestFromFindingV2LinksEvidence(t *testing.T) {
+	f := sampleFinding()
+	f.Evidence.Match = ""
+	f.MatchRef = "https://evidence.northwick.example/v1/findings/x/match"
+	tk := FromFinding(f)
+	if !strings.Contains(tk.Body, "Evidence: https://evidence.northwick.example/v1/findings/x/match") || strings.Contains(tk.Body, "Match:") {
+		t.Fatalf("body = %q", tk.Body)
+	}
+}

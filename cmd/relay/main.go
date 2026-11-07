@@ -117,6 +117,8 @@ func run(log *slog.Logger) error {
 	defer srv.Close()
 
 	h := relay.NewHandler(log, ticket.New(cfg.TicketsURL, cfg.TicketsTok, cfg.TicketsRPS), chat.New(cfg.ChatWebhook), relay.ParseSuppress(cfg.Suppress))
+	h.Contract = cfg.Contract
+	log.Info("relay starting", "contract_version", cfg.Contract, "tickets_rps", cfg.TicketsRPS)
 	subscribe := func() (*nats.Subscription, error) {
 		return js.PullSubscribe(cfg.Subjects, cfg.Consumer, nats.Bind(cfg.Stream, cfg.Consumer))
 	}

@@ -289,3 +289,78 @@ func TestCreateErrorAfterCreateStillNotifies(t *testing.T) {
 		t.Fatalf("tickets=%d posts=%d, want 1 and 1", len(refs), posts)
 	}
 }
+
+func v2MsgFor(t *testing.T, fp, legacy string) *fakeMsg {
+	t.Helper()
+	p := map[string]any{
+		"schema_version": 2, "id": "id-" + fp, "fingerprint": fp, "scanner": "semgrep", "rule": "r",
+		"severity": 3, "repo": "northwick/ledger", "path": "a.go", "line": 3, "title": "Issue",
+		"description": "desc", "evidence": map[string]string{"match_ref": "https://evidence.northwick.example/v1/findings/x/match"},
+		"emitted_at": "2026-11-02T00:00:00Z",
+	}
+	if legacy != "" {
+		p["legacy_fingerprint"] = legacy
+	}
+	b, err := json.Marshal(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &fakeMsg{data: b, subject: "findings.v2.semgrep"}
+}
+
+// While the scanners dual-publish, a relay on contract 1 tickets v1 only.
+func TestV2SkippedOnContract1(t *testing.T) {
+	h, s := newHandler(t, "")
+	m := v2MsgFor(t, "fp2", "")
+	h.Handle(context.Background(), m)
+	m.only(t, "ack")
+	if len(s.tickets) != 0 || len(s.messages) != 0 {
+		t.Fatalf("tickets=%d messages=%d", len(s.tickets), len(s.messages))
+	}
+}
+
+func TestV1SkippedOnContract2(t *testing.T) {
+	h, s := newHandler(t, "")
+	h.Contract = 2
+	m := msgFor(t, "fp1")
+	h.Handle(context.Background(), m)
+	m.only(t, "ack")
+	if len(s.tickets) != 0 {
+		t.Fatalf("tickets=%d", len(s.tickets))
+	}
+}
+
+func TestV2NewFindingTicketedUnderV2Fingerprint(t *testing.T) {
+	h, s := newHandler(t, "")
+	h.Contract = 2
+	m := v2MsgFor(t, "fp2", "fp1")
+	h.Handle(context.Background(), m)
+	m.only(t, "ack")
+	if len(s.tickets) != 1 || s.tickets[0].ExternalRef != "fp2" || s.tickets[0].Severity != "high" {
+		t.Fatalf("tickets = %+v", s.tickets)
+	}
+}
+
+// A v2 finding whose v1 fingerprint already has a ticket is not ticketed again.
+func TestV2MatchesV1TicketByLegacyFingerprint(t *testing.T) {
+	h, s := newHandler(t, "")
+	h.Handle(context.Background(), msgFor(t, "fp1"))
+	h.Contract = 2
+	m := v2MsgFor(t, "fp2", "fp1")
+	h.Handle(context.Background(), m)
+	m.only(t, "ack")
+	if len(s.tickets) != 1 || len(s.messages) != 1 {
+		t.Fatalf("tickets=%d messages=%d, want 1 and 1", len(s.tickets), len(s.messages))
+	}
+}
+
+func TestV2SuppressedByLegacyFingerprint(t *testing.T) {
+	h, s := newHandler(t, "fp1")
+	h.Contract = 2
+	m := v2MsgFor(t, "fp2", "fp1")
+	h.Handle(context.Background(), m)
+	m.only(t, "ack")
+	if len(s.tickets) != 0 {
+		t.Fatalf("tickets=%d", len(s.tickets))
+	}
+}

@@ -1,4 +1,5 @@
-// Package finding defines the scanner payload carried on findings.* subjects.
+// Package finding defines the scanner payload carried on findings.* subjects
+// (contract v1) and findings.v2.* subjects (contract v2).
 package finding
 
 import (
@@ -29,6 +30,11 @@ type Finding struct {
 	Description string    `json:"description"`
 	Evidence    Evidence  `json:"evidence"`
 	EmittedAt   time.Time `json:"emitted_at"`
+
+	// Set from the payload, not part of the v1 wire format.
+	Version           int    `json:"-"` // contract version, 1 or 2
+	MatchRef          string `json:"-"` // v2: link to the match in the evidence vault
+	LegacyFingerprint string `json:"-"` // v2: the v1 fingerprint of the same finding, if sent
 }
 
 // ErrNoFingerprint is returned when the payload has no fingerprint.
@@ -54,9 +60,19 @@ func mask(s string) string {
 // an integer. Line is left at 0; the rest of the finding is intact.
 var ErrBadLine = errors.New("finding: line is not an integer")
 
-// Parse decodes a message payload into a Finding.
+// Parse decodes a v1 or v2 payload into a Finding.
 func Parse(data []byte) (Finding, error) {
-	var f Finding
+	var head struct {
+		SchemaVersion int `json:"schema_version"`
+	}
+	if err := json.Unmarshal(data, &head); err == nil && head.SchemaVersion == 2 {
+		return parseV2(data)
+	}
+	return parseV1(data)
+}
+
+func parseV1(data []byte) (Finding, error) {
+	f := Finding{Version: 1}
 	var lineErr error
 	if err := json.Unmarshal(data, &f); err != nil {
 		var typeErr *json.UnmarshalTypeError
@@ -69,5 +85,6 @@ func Parse(data []byte) (Finding, error) {
 	if f.Fingerprint == "" {
 		return Finding{}, ErrNoFingerprint
 	}
+	f.Version = 1
 	return f, lineErr
 }

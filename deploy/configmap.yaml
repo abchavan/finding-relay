@@ -15,6 +15,10 @@ data:
   # Two replicas at 2/s each leaves headroom. Change together with replicas.
   TICKETS_RPS: "2"
   BATCH: "1"
+  # Findings contract the relay tickets. Scanners dual-publish v1 and v2 from
+  # 2026-11-02; switch to "2" only once v2 carries legacy_fingerprint (see
+  # DECISIONS.md), and before v1 stops on 2026-11-16.
+  CONTRACT_VERSION: "1"
   # Accepted findings, acked without a ticket. One entry per AppSec sign-off:
   #   29d406550a35329c1c2de94a32efffa924df2e5e  accepted by AppSec 2026-07-02, SEC-1203
   #   e2747a52a9d79d1fa563deeff11465b7c7ac4f38  accepted by AppSec 2026-07-06, SEC-1219
