@@ -64,3 +64,24 @@ missed chat post, never a missed ticket.
 | 3:30-4:00 | DECISIONS.md, OUTBOX.md, final test run |
 
 If the second packet changes the ranking, I will say so in DECISIONS.md.
+
+## After the second packet
+
+What changed and why:
+
+- **The incident moved drops above duplicates.** On 15 Oct the relay dropped
+  47 findings on 429, 5 of them critical, and nobody saw it; the incident was
+  closed as duplicates. Problem 1 was already first; it is now the headline of
+  INCIDENT.md and an urgent note to Grace and Marco.
+- **New problem: the client timeout is shorter than the API's slow path.**
+  All 48 same-night duplicates were a create that ran 6-14 s, timed out at
+  5 s on our side and was redelivered at once. The lookup alone does not
+  close this if the retry arrives while the first create is still running,
+  so creates get 15 s and retries wait 30 s. Small change; added.
+- **Contract v2 is a duplicate generator.** The v2 fingerprint differs from v1,
+  so switching naively re-tickets every open finding (tested: 20 of 20) and
+  the v1 suppression list stops matching. Added a CONTRACT_VERSION switch so
+  2 Nov is safe (the relay ignores v2), and v2 parsing that uses a
+  `legacy_fingerprint` field I am asking Priya for. The 16 Nov switch depends
+  on her answer.
+- Packet 2 took the time budgeted for it; nothing on the cut line moved.
