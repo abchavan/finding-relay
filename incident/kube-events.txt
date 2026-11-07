@@ -1,0 +1,20 @@
+LAST SEEN   TYPE     REASON              OBJECT                                  MESSAGE
+42m         Normal   ScalingReplicaSet   deployment/finding-relay                Scaled up replica set finding-relay-6d8f7c9b54 from 2 to 4
+42m         Normal   SuccessfulCreate    replicaset/finding-relay-6d8f7c9b54     Created pod: finding-relay-6d8f7c9b54-f5n2d
+42m         Normal   SuccessfulCreate    replicaset/finding-relay-6d8f7c9b54     Created pod: finding-relay-6d8f7c9b54-q8z1m
+42m         Normal   Scheduled           pod/finding-relay-6d8f7c9b54-q8z1m      Successfully assigned security/finding-relay-6d8f7c9b54-q8z1m to node-pool-b-3
+42m         Normal   Scheduled           pod/finding-relay-6d8f7c9b54-f5n2d      Successfully assigned security/finding-relay-6d8f7c9b54-f5n2d to node-pool-b-7
+42m         Normal   Pulling             pod/finding-relay-6d8f7c9b54-f5n2d      Pulling image "registry.northwick.example/security/finding-relay:latest"
+42m         Normal   Pulling             pod/finding-relay-6d8f7c9b54-q8z1m      Pulling image "registry.northwick.example/security/finding-relay:latest"
+42m         Normal   Pulled              pod/finding-relay-6d8f7c9b54-f5n2d      Successfully pulled image "registry.northwick.example/security/finding-relay:latest" in 6.205s (6.205s including waiting). Image size: 9234816 bytes.
+42m         Normal   Created             pod/finding-relay-6d8f7c9b54-f5n2d      Created container: relay
+42m         Normal   Started             pod/finding-relay-6d8f7c9b54-f5n2d      Started container relay
+42m         Normal   Pulled              pod/finding-relay-6d8f7c9b54-q8z1m      Successfully pulled image "registry.northwick.example/security/finding-relay:latest" in 7.264s (7.264s including waiting). Image size: 9234816 bytes.
+42m         Normal   Created             pod/finding-relay-6d8f7c9b54-q8z1m      Created container: relay
+42m         Normal   Started             pod/finding-relay-6d8f7c9b54-q8z1m      Started container relay
+6m55s       Normal   SuccessfulRescale   horizontalpodautoscaler/finding-relay   New size: 2; reason: All metrics below target
+6m54s       Normal   ScalingReplicaSet   deployment/finding-relay                Scaled down replica set finding-relay-6d8f7c9b54 from 4 to 2
+6m54s       Normal   SuccessfulDelete    replicaset/finding-relay-6d8f7c9b54     Deleted pod: finding-relay-6d8f7c9b54-q8z1m
+6m54s       Normal   SuccessfulDelete    replicaset/finding-relay-6d8f7c9b54     Deleted pod: finding-relay-6d8f7c9b54-f5n2d
+6m54s       Normal   Killing             pod/finding-relay-6d8f7c9b54-q8z1m      Stopping container relay
+6m54s       Normal   Killing             pod/finding-relay-6d8f7c9b54-f5n2d      Stopping container relay

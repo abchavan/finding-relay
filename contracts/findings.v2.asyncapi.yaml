@@ -1,0 +1,140 @@
+asyncapi: '2.6.0'
+id: 'urn:northwick:security:findings:v2'
+info:
+  title: Security findings
+  version: '2.0.0-draft'
+  description: |
+    DRAFT, Scanner Platform, 2026-10-22. Findings emitted by the security
+    scanners (semgrep, gitleaks, osv, trivy), version 2 of the contract.
+    One message per finding per scan. A finding that is still present on the
+    next scan is emitted again with a new `id` and the same `fingerprint`.
+
+    Differences from v1: `schema_version`; integer `severity`; the raw match
+    and its context are replaced by `evidence.match_ref`; the fingerprint is
+    sha256 over scanner, rule, repo, path and the sha256 of the normalised
+    match, so v1 and v2 fingerprints of the same finding differ.
+
+    Rollout: dual-publish (v1 and v2 for every finding) from 2026-11-02;
+    v1 stops 2026-11-16.
+  contact:
+    name: Scanner Platform
+    email: scanner-platform@northwick.example
+defaultContentType: application/json
+servers:
+  production:
+    url: nats.messaging.svc:4222
+    protocol: nats
+    description: JetStream stream FINDINGS captures findings.> (v1 and v2 subjects)
+channels:
+  findings.v2.{scanner}:
+    description: Version 2 findings from one scanner.
+    parameters:
+      scanner:
+        description: The scanner that produced the finding.
+        schema:
+          type: string
+          enum: [semgrep, gitleaks, osv, trivy]
+    subscribe:
+      operationId: receiveFindingV2
+      summary: Scanners publish v2 findings here; consumers receive them.
+      message:
+        $ref: '#/components/messages/FindingV2'
+components:
+  messages:
+    FindingV2:
+      name: FindingV2
+      title: Security finding, version 2
+      contentType: application/json
+      headers:
+        type: object
+        required: [Nats-Msg-Id, Content-Type]
+        properties:
+          Nats-Msg-Id:
+            type: string
+            format: uuid
+            description: Equal to the payload `id`.
+          Content-Type:
+            type: string
+            const: application/json
+      payload:
+        $ref: '#/components/schemas/FindingV2'
+      examples:
+        - name: semgrep-medium
+          summary: The v1 example, re-emitted in v2 shape.
+          headers:
+            Nats-Msg-Id: 0c7a9e52-1d4b-4f8e-a6c3-5e2f9b7d1a40
+            Content-Type: application/json
+          payload:
+            schema_version: 2
+            id: 0c7a9e52-1d4b-4f8e-a6c3-5e2f9b7d1a40
+            fingerprint: 5d41402abc4b2a76b9719d911017c592e99f0a3bd2c4a7e8f1b6c5d4a3b2c1d0
+            scanner: semgrep
+            rule: go.lang.security.audit.net.use-tls.use-tls
+            severity: 2
+            repo: northwick/merchant-portal
+            path: internal/server/server.go
+            line: 88
+            title: HTTP server started without TLS
+            description: Found an HTTP server without TLS. Use 'http.ListenAndServeTLS' instead.
+            evidence:
+              match_ref: https://evidence.northwick.example/v1/findings/0c7a9e52-1d4b-4f8e-a6c3-5e2f9b7d1a40/match
+            emitted_at: '2026-11-02T02:14:07Z'
+  schemas:
+    FindingV2:
+      type: object
+      additionalProperties: false
+      required: [schema_version, id, fingerprint, scanner, rule, severity, repo, path, line, title, description, evidence, emitted_at]
+      properties:
+        schema_version:
+          type: integer
+          const: 2
+        id:
+          type: string
+          format: uuid
+          description: Unique per emission. A re-scan that finds the same issue emits a new id.
+        fingerprint:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+          description: |
+            Stable identity of the finding across re-scans:
+            sha256("<scanner>|<rule>|<repo>|<path>|" + sha256hex(normalised match)).
+            Not equal to, and not derivable from, the v1 fingerprint of the same finding.
+        scanner:
+          type: string
+          enum: [semgrep, gitleaks, osv, trivy]
+        rule:
+          type: string
+          description: The scanner's own rule id.
+        severity:
+          type: integer
+          minimum: 0
+          maximum: 4
+          description: 0 info, 1 low, 2 medium, 3 high, 4 critical.
+        repo:
+          type: string
+          pattern: '^northwick/[a-z0-9-]+$'
+        path:
+          type: string
+          description: File path relative to the repository root.
+        line:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+        description:
+          type: string
+          description: Free text from the scanner. Not validated; treat as untrusted input.
+        evidence:
+          type: object
+          required: [match_ref]
+          additionalProperties: false
+          properties:
+            match_ref:
+              type: string
+              format: uri
+              description: |
+                URL of the matched text in the evidence vault. Requires the
+                scanner-platform read role. Retained for 30 days after emission.
+        emitted_at:
+          type: string
+          format: date-time

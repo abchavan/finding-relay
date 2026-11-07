@@ -1,0 +1,215 @@
+# 2026-10-15T03:00:00Z nats consumer info FINDINGS finding-relay
+Information for Consumer FINDINGS > finding-relay created 2026-09-03 15:12:01
+
+Configuration:
+
+                    Name: finding-relay
+               Pull Mode: true
+          Filter Subject: findings.>
+          Deliver Policy: All
+              Ack Policy: Explicit
+                Ack Wait: 30.00s
+           Replay Policy: Instant
+         Max Ack Pending: 1,000
+       Max Waiting Pulls: 512
+
+State:
+
+  Last Delivered Message: Consumer sequence: 1,291,117 Stream sequence: 1,284,492 Last delivery: 1m56s ago
+    Acknowledgment Floor: Consumer sequence: 1,291,117 Stream sequence: 1,284,492 Last Ack: 1m56s ago
+        Outstanding Acks: 0 out of maximum 1,000
+    Redelivered Messages: 0
+    Unprocessed Messages: 0
+           Waiting Pulls: 2 of maximum 512
+
+# 2026-10-15T03:05:00Z nats consumer info FINDINGS finding-relay
+Information for Consumer FINDINGS > finding-relay created 2026-09-03 15:12:01
+
+Configuration:
+
+                    Name: finding-relay
+               Pull Mode: true
+          Filter Subject: findings.>
+          Deliver Policy: All
+              Ack Policy: Explicit
+                Ack Wait: 30.00s
+           Replay Policy: Instant
+         Max Ack Pending: 1,000
+       Max Waiting Pulls: 512
+
+State:
+
+  Last Delivered Message: Consumer sequence: 1,291,128 Stream sequence: 1,284,500 Last delivery: 2m23s ago
+    Acknowledgment Floor: Consumer sequence: 1,291,128 Stream sequence: 1,284,500 Last Ack: 2m22s ago
+        Outstanding Acks: 0 out of maximum 1,000
+    Redelivered Messages: 0
+    Unprocessed Messages: 0
+           Waiting Pulls: 2 of maximum 512
+
+# 2026-10-15T03:10:00Z nats consumer info FINDINGS finding-relay
+Information for Consumer FINDINGS > finding-relay created 2026-09-03 15:12:01
+
+Configuration:
+
+                    Name: finding-relay
+               Pull Mode: true
+          Filter Subject: findings.>
+          Deliver Policy: All
+              Ack Policy: Explicit
+                Ack Wait: 30.00s
+           Replay Policy: Instant
+         Max Ack Pending: 1,000
+       Max Waiting Pulls: 512
+
+State:
+
+  Last Delivered Message: Consumer sequence: 1,291,190 Stream sequence: 1,284,548 Last delivery: 2.90s ago
+    Acknowledgment Floor: Consumer sequence: 1,291,168 Stream sequence: 1,284,521 Last Ack: 0.13s ago
+        Outstanding Acks: 12 out of maximum 1,000
+    Redelivered Messages: 4
+    Unprocessed Messages: 12
+           Waiting Pulls: 0 of maximum 512
+
+# 2026-10-15T03:15:00Z nats consumer info FINDINGS finding-relay
+Information for Consumer FINDINGS > finding-relay created 2026-09-03 15:12:01
+
+Configuration:
+
+                    Name: finding-relay
+               Pull Mode: true
+          Filter Subject: findings.>
+          Deliver Policy: All
+              Ack Policy: Explicit
+                Ack Wait: 30.00s
+           Replay Policy: Instant
+         Max Ack Pending: 1,000
+       Max Waiting Pulls: 512
+
+State:
+
+  Last Delivered Message: Consumer sequence: 1,291,240 Stream sequence: 1,284,567 Last delivery: 3.69s ago
+    Acknowledgment Floor: Consumer sequence: 1,291,224 Stream sequence: 1,284,567 Last Ack: 1.81s ago
+        Outstanding Acks: 9 out of maximum 1,000
+    Redelivered Messages: 1
+    Unprocessed Messages: 0
+           Waiting Pulls: 2 of maximum 512
+
+# 2026-10-15T03:20:00Z nats consumer info FINDINGS finding-relay
+Information for Consumer FINDINGS > finding-relay created 2026-09-03 15:12:01
+
+Configuration:
+
+                    Name: finding-relay
+               Pull Mode: true
+          Filter Subject: findings.>
+          Deliver Policy: All
+              Ack Policy: Explicit
+                Ack Wait: 30.00s
+           Replay Policy: Instant
+         Max Ack Pending: 1,000
+       Max Waiting Pulls: 512
+
+State:
+
+  Last Delivered Message: Consumer sequence: 1,291,262 Stream sequence: 1,284,590 Last delivery: 3.93s ago
+    Acknowledgment Floor: Consumer sequence: 1,291,255 Stream sequence: 1,284,589 Last Ack: 4.67s ago
+        Outstanding Acks: 5 out of maximum 1,000
+    Redelivered Messages: 1
+    Unprocessed Messages: 0
+           Waiting Pulls: 2 of maximum 512
+
+# 2026-10-15T03:25:00Z nats consumer info FINDINGS finding-relay
+Information for Consumer FINDINGS > finding-relay created 2026-09-03 15:12:01
+
+Configuration:
+
+                    Name: finding-relay
+               Pull Mode: true
+          Filter Subject: findings.>
+          Deliver Policy: All
+              Ack Policy: Explicit
+                Ack Wait: 30.00s
+           Replay Policy: Instant
+         Max Ack Pending: 1,000
+       Max Waiting Pulls: 512
+
+State:
+
+  Last Delivered Message: Consumer sequence: 1,291,392 Stream sequence: 1,284,706 Last delivery: 4.88s ago
+    Acknowledgment Floor: Consumer sequence: 1,291,392 Stream sequence: 1,284,706 Last Ack: 4.55s ago
+        Outstanding Acks: 0 out of maximum 1,000
+    Redelivered Messages: 0
+    Unprocessed Messages: 0
+           Waiting Pulls: 4 of maximum 512
+
+# 2026-10-15T03:30:00Z nats consumer info FINDINGS finding-relay
+Information for Consumer FINDINGS > finding-relay created 2026-09-03 15:12:01
+
+Configuration:
+
+                    Name: finding-relay
+               Pull Mode: true
+          Filter Subject: findings.>
+          Deliver Policy: All
+              Ack Policy: Explicit
+                Ack Wait: 30.00s
+           Replay Policy: Instant
+         Max Ack Pending: 1,000
+       Max Waiting Pulls: 512
+
+State:
+
+  Last Delivered Message: Consumer sequence: 1,291,392 Stream sequence: 1,284,706 Last delivery: 5m4s ago
+    Acknowledgment Floor: Consumer sequence: 1,291,392 Stream sequence: 1,284,706 Last Ack: 5m4s ago
+        Outstanding Acks: 0 out of maximum 1,000
+    Redelivered Messages: 0
+    Unprocessed Messages: 0
+           Waiting Pulls: 4 of maximum 512
+
+# 2026-10-15T03:35:00Z nats consumer info FINDINGS finding-relay
+Information for Consumer FINDINGS > finding-relay created 2026-09-03 15:12:01
+
+Configuration:
+
+                    Name: finding-relay
+               Pull Mode: true
+          Filter Subject: findings.>
+          Deliver Policy: All
+              Ack Policy: Explicit
+                Ack Wait: 30.00s
+           Replay Policy: Instant
+         Max Ack Pending: 1,000
+       Max Waiting Pulls: 512
+
+State:
+
+  Last Delivered Message: Consumer sequence: 1,291,392 Stream sequence: 1,284,706 Last delivery: 10m4s ago
+    Acknowledgment Floor: Consumer sequence: 1,291,392 Stream sequence: 1,284,706 Last Ack: 10m4s ago
+        Outstanding Acks: 0 out of maximum 1,000
+    Redelivered Messages: 0
+    Unprocessed Messages: 0
+           Waiting Pulls: 4 of maximum 512
+
+# 2026-10-15T03:40:00Z nats consumer info FINDINGS finding-relay
+Information for Consumer FINDINGS > finding-relay created 2026-09-03 15:12:01
+
+Configuration:
+
+                    Name: finding-relay
+               Pull Mode: true
+          Filter Subject: findings.>
+          Deliver Policy: All
+              Ack Policy: Explicit
+                Ack Wait: 30.00s
+           Replay Policy: Instant
+         Max Ack Pending: 1,000
+       Max Waiting Pulls: 512
+
+State:
+
+  Last Delivered Message: Consumer sequence: 1,291,392 Stream sequence: 1,284,706 Last delivery: 15m4s ago
+    Acknowledgment Floor: Consumer sequence: 1,291,392 Stream sequence: 1,284,706 Last Ack: 15m4s ago
+        Outstanding Acks: 0 out of maximum 1,000
+    Redelivered Messages: 0
+    Unprocessed Messages: 0
+           Waiting Pulls: 4 of maximum 512
