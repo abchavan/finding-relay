@@ -364,3 +364,20 @@ func TestV2SuppressedByLegacyFingerprint(t *testing.T) {
 		t.Fatalf("tickets=%d", len(s.tickets))
 	}
 }
+
+// A ticket that disappears on the platform (the reason to replay) is opened
+// again on the next delivery, even though this relay handled it before.
+func TestTicketLostOnPlatformIsRecreated(t *testing.T) {
+	h, s := newHandler(t, "")
+	h.Handle(context.Background(), msgFor(t, "fp1"))
+	s.mu.Lock()
+	s.tickets = nil
+	s.mu.Unlock()
+
+	m := msgFor(t, "fp1")
+	h.Handle(context.Background(), m)
+	m.only(t, "ack")
+	if len(s.tickets) != 1 {
+		t.Fatalf("tickets=%d, want 1", len(s.tickets))
+	}
+}

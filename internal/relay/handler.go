@@ -33,10 +33,11 @@ type Msg interface {
 
 // Handler processes one message at a time.
 //
-// The ticket platform is the source of truth for "already ticketed": before
-// creating a ticket the handler looks one up by external_ref (the
-// fingerprint). The in-memory maps only save API calls and remember a chat
-// post that still has to go out.
+// The ticket platform is the source of truth for "already ticketed": every
+// message is looked up by external_ref (the fingerprint) before a ticket is
+// created. Nothing is cached in memory, so a replay also restores tickets that
+// were lost on the ticketing side. The only state kept is a chat post that is
+// still owed.
 type Handler struct {
 	log        *slog.Logger
 	tickets    *ticket.Client
@@ -49,7 +50,6 @@ type Handler struct {
 	Contract int
 
 	mu      sync.Mutex
-	done    map[string]string // fingerprint -> ticket id, ticket and chat both sent
 	pending map[string]string // fingerprint -> ticket id ("" if the create outcome is unknown), chat post still owed
 }
 
@@ -57,7 +57,7 @@ type Handler struct {
 func NewHandler(log *slog.Logger, tickets *ticket.Client, chat *chat.Client, suppressed map[string]bool) *Handler {
 	return &Handler{
 		log: log, tickets: tickets, chat: chat, suppressed: suppressed, Contract: 1,
-		done: map[string]string{}, pending: map[string]string{},
+		pending: map[string]string{},
 	}
 }
 
@@ -88,11 +88,6 @@ func (h *Handler) Handle(ctx context.Context, m Msg) {
 		_ = m.Ack()
 		return
 	}
-	if h.isDone(f.Fingerprint) {
-		_ = m.Ack()
-		return
-	}
-
 	id, owed := h.pendingChat(f.Fingerprint)
 	if id == "" {
 		id, err = h.findTicket(ctx, f)
@@ -103,7 +98,7 @@ func (h *Handler) Handle(ctx context.Context, m Msg) {
 		switch {
 		case id != "" && !owed:
 			log.Info("ticket already exists", "ticket", id)
-			h.markDone(f.Fingerprint, id)
+			h.clearPending(f.Fingerprint)
 			_ = m.Ack()
 			return
 		case id == "":
@@ -128,7 +123,7 @@ func (h *Handler) Handle(ctx context.Context, m Msg) {
 			return
 		}
 	}
-	h.markDone(f.Fingerprint, id)
+	h.clearPending(f.Fingerprint)
 	_ = m.Ack()
 }
 
@@ -153,13 +148,6 @@ func (h *Handler) retry(log *slog.Logger, m Msg, msg string, err error) {
 	_ = m.NakWithDelay(retryDelay)
 }
 
-func (h *Handler) isDone(fp string) bool {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	_, ok := h.done[fp]
-	return ok
-}
-
 func (h *Handler) pendingChat(fp string) (string, bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -173,9 +161,8 @@ func (h *Handler) setPending(fp, id string) {
 	h.pending[fp] = id
 }
 
-func (h *Handler) markDone(fp, id string) {
+func (h *Handler) clearPending(fp string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	delete(h.pending, fp)
-	h.done[fp] = id
 }
