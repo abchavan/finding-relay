@@ -11,6 +11,10 @@ data:
   SUBJECTS: "findings.>"
   TICKETS_URL: https://tickets.northwick.example/api
   HTTP_ADDR: ":8080"
+  # The ticket API allows 5 requests/s per token, shared by every replica.
+  # Two replicas at 2/s each leaves headroom. Change together with replicas.
+  TICKETS_RPS: "2"
+  BATCH: "1"
   # Accepted findings, acked without a ticket. One entry per AppSec sign-off:
   #   29d406550a35329c1c2de94a32efffa924df2e5e  accepted by AppSec 2026-07-02, SEC-1203
   #   e2747a52a9d79d1fa563deeff11465b7c7ac4f38  accepted by AppSec 2026-07-06, SEC-1219

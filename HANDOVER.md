@@ -97,9 +97,11 @@ I came from Kafka too; this is the cheat sheet I wish I'd had.
 kubectl -n security logs deploy/finding-relay -f
 ```
 
-Locally: `make logs`. Useful messages: `finding received`, `ticket API rate
-limited, dropping`, `chat webhook failed, will retry`, `bad finding, will
-retry`, `replay requested`.
+Locally: `make logs`. Useful messages: `finding received`, `ticket created`,
+`ticket already exists`, `ticket API rate limited, will retry`, `chat webhook
+failed, will retry`, `finding breaks the contract, line ignored`, `bad
+finding, dropping`, `replay requested`, `replay requested beyond stream
+retention`.
 
 **Consumer lag.** `make stream` locally, or the same `nats stream info FINDINGS`
 / `nats consumer info FINDINGS finding-relay` with your own creds against the
@@ -110,21 +112,26 @@ cluster. Look at:
 - *Redelivered Messages*: things that came back after a nak or AckWait. A
   small number is normal when the ticket API wobbles.
 
-**Replay.** Only if you really need it (e.g. tickets lost on the ticketing
-side). Tell the ticketing team first.
+**Replay.** Safe to run: a finding that already has a ticket is skipped, with
+no new ticket and no chat post. Still tell the ticketing team first, because
+every replayed message costs a search call against their rate limit.
 
 ```sh
 kubectl -n security port-forward deploy/finding-relay 8080:8080
-curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" localhost:8080/admin/replay
-# {"status":"replaying"}
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" \
+  "localhost:8080/admin/replay?since=2026-10-20T00:00:00Z"
+# {"since":"...","status":"replaying","oldest_available":"..."}
 ```
 
-The consumer is recreated from sequence 1 and the relay works through the
-stream again. Watch `make stream` until Unprocessed Messages is back to zero.
+The consumer is recreated from `since` and the relay works through the
+stream again. The stream holds 7 days; a `warning` in the response means
+`since` is older than that. Watch `make stream` until Unprocessed Messages is
+back to zero. The endpoint is disabled when `ADMIN_TOKEN` is not set.
 
-**Ticket API rate limiting.** It just drops them, you'll see the warning
-(`ticket API rate limited, dropping`) in the logs. Nothing to do unless it's
-sustained; if it is, talk to the ticketing platform team about the limit.
+**Ticket API rate limiting.** The client is paced by `TICKETS_RPS` (per pod;
+the platform's 5/s is per token across all pods). A 429 is retried after a
+delay, never dropped. Sustained `ticket API rate limited, will retry` means
+the per-pod rate times the replica count is above 5.
 
 **Chat webhook down.** The relay naks and retries until it's back. Nothing
 to do; it catches up on its own.

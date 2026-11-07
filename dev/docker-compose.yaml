@@ -54,6 +54,8 @@ services:
       TICKETS_TOKEN: nwk-tickets-dev-5Hc2Yd8Mv1
       CHAT_WEBHOOK_URL: http://chat-sink:8082/hooks/T0K3N-dev-8Fq2Lw
       HTTP_ADDR: ":8080"
+      TICKETS_RPS: "4"
+      ADMIN_TOKEN: dev-admin-token
     ports:
       - "8080:8080"
     depends_on:

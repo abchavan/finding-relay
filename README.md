@@ -55,15 +55,18 @@ All configuration is environment variables.
 | `TICKETS_TOKEN` | (empty) | bearer token for the ticket API |
 | `CHAT_WEBHOOK_URL` | (empty) | full webhook URL including the path token |
 | `SUPPRESS_FINGERPRINTS` | (empty) | comma-separated fingerprints to ack without a ticket |
-| `ADMIN_TOKEN` | `changeme` | token for the admin endpoint |
+| `ADMIN_TOKEN` | (empty) | token for the admin endpoint; replay is disabled when empty |
 | `HTTP_ADDR` | `:8080` | health check and admin endpoint |
-| `BATCH` | `10` | messages per pull |
+| `BATCH` | `1` | messages per pull |
+| `TICKETS_RPS` | `4` | requests per second to the ticket API from this pod. The platform limit (5/s) is per token, so split it across replicas |
 
 ## Admin endpoint
 
-`GET /healthz` returns `ok`. `POST /admin/replay` with an `X-Admin-Token`
-header redelivers the stream from the beginning; see the runbook in
-`HANDOVER.md` before you use it.
+`GET /healthz` returns `ok`. `POST /admin/replay?since=<RFC 3339>` with an
+`X-Admin-Token` header redelivers everything published since that time.
+Findings that already have a ticket are skipped: no new ticket, no chat post.
+The stream only holds 7 days; if `since` is older, the response has a
+`warning` and `oldest_available`. See the runbook in `HANDOVER.md`.
 
 ## Deploy
 
