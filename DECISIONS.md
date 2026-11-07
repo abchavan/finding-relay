@@ -98,7 +98,7 @@ mock ticket API, chat sink; see `logs/terminal/`):
   the ticket API, so a replay could not restore lost tickets. Removed in "Ask
   the ticket API on every delivery"; every delivery now does one search.
 
-**In the preparation session with the assistant** (`logs/claude-chat/`:
+**In the preparation session with the assistant** (a claude.ai chat, not attached; see `logs/README.md`.
 `nats-server` 2.10 built from source, mocks and relays run as processes):
 
 - Two relays, ticket API 503 on every 10th create (after creating), chat 500
