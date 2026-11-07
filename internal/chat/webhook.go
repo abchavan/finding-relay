@@ -22,7 +22,7 @@ type Message struct {
 func FromFinding(f finding.Finding, ticketID string) Message {
 	return Message{
 		Text:  fmt.Sprintf("%s %s in %s (%s)", f.Severity, f.Title, f.Repo, ticketID),
-		Match: f.Evidence.Match,
+		Match: f.SafeMatch(),
 	}
 }
 

@@ -2,6 +2,7 @@ package finding
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -30,5 +31,27 @@ func TestParseRequiresFingerprint(t *testing.T) {
 	_, err := Parse([]byte(`{"id":"x","severity":"low"}`))
 	if !errors.Is(err, ErrNoFingerprint) {
 		t.Fatalf("got %v", err)
+	}
+}
+
+func TestParseToleratesBadLine(t *testing.T) {
+	data := strings.Replace(sample, `"line":42`, `"line":"forty-two"`, 1)
+	f, err := Parse([]byte(data))
+	if !errors.Is(err, ErrBadLine) {
+		t.Fatalf("got %v", err)
+	}
+	if f.Fingerprint != "0123456789abcdef0123456789abcdef01234567" || f.Line != 0 || f.Severity != "high" {
+		t.Fatalf("unexpected finding: %+v", f)
+	}
+}
+
+func TestSafeMatch(t *testing.T) {
+	f := Finding{Scanner: "gitleaks", Evidence: Evidence{Match: "sk_live_abcdefgh"}}
+	if got := f.SafeMatch(); got != "sk_l************" {
+		t.Fatalf("got %q", got)
+	}
+	f.Scanner = "semgrep"
+	if got := f.SafeMatch(); got != "sk_live_abcdefgh" {
+		t.Fatalf("got %q", got)
 	}
 }
