@@ -115,3 +115,122 @@ Hi Dana,
    September's replay done with `changeme`?
 
 **Assumed to carry on:** it was `changeme`, so I treat the token as leaked.
+
+---
+
+## 6. To Grace Adeyemi and Marco Lindqvist, cc Ravi Menon (urgent)
+
+**Time:** 07:04
+**Subject:** 5 critical findings from 15 Oct may have no ticket
+
+Grace, Marco,
+
+While writing up the 15 Oct incident I found that the relay dropped 47
+findings that night on the ticket API's rate limit, and none of them got a
+ticket in the window we have logs for. Five are critical:
+
+- eeef61637fa6b343d08ed70ee25b0bc9780bea50 gitleaks, northwick/payments-api, Stripe live secret key
+- ace7ea23fbebd093af6ee443ba11e40f7f20d39b gitleaks, northwick/merchant-portal, Stripe live secret key
+- d131d85f83a9ab7b56e8e5a8fc46c3441c4499d4 gitleaks, northwick/risk-engine, AWS access key id
+- ee39d39dfe41c2519df94aa6aa382a68307d8c88 gitleaks, northwick/risk-engine, generic API key
+- 21b96e9c270d912cbde0bdc5820b31d849711125 trivy, northwick/notifications, CVE-2025-33845
+
+The stream no longer holds 15 Oct, so a replay can't bring them back. If
+they're still present, the nightly scan re-emits them and the fixed relay
+tickets them. Could someone check these five by hand today? The full list of
+47 is in INCIDENT.md's evidence; I've asked ticketing to search for them.
+
+On duplicates vs drops: I haven't traded one for the other. The relay no
+longer drops on rate limits, and it checks the ticket system before creating,
+which removes both kinds of duplicate we saw that night. Details in
+DECISIONS.md.
+
+**Assumed to carry on:** none of the five was ticketed later.
+
+---
+
+## 7. To Jonas Reyes and Helena Marsh (Ticketing), cc Ravi Menon
+
+**Time:** 07:04
+**Subject:** 15 Oct: your deploy didn't cause the duplicates; two requests
+
+Hi Jonas, Helena,
+
+For Thursday's review: the evidence supports Jonas. The relay doesn't call
+search; the duplicates began before 03:02 and ended before the rollback. They
+came from the relay retrying creates that took longer than its 5 s timeout,
+plus per-pod dedup. Write-up in INCIDENT.md.
+
+Two requests:
+1. Could you search for tickets created after 03:50 on 15 Oct for the 47
+   fingerprints the relay dropped (list attached)? That tells us what is
+   still missing.
+2. API.md lists severities low/medium/high/critical, but the scanners also
+   send `info` (about a sixth of findings). Does the real API accept `info`?
+   If it rejects it, the relay would retry those forever.
+
+**Assumed to carry on:** `info` is accepted, as the mock does.
+
+---
+
+## 8. To Ravi Menon
+
+**Time:** 07:04
+**Subject:** INCIDENT.md for Thursday, and two gaps in the packet
+
+Hi Ravi,
+
+INCIDENT.md is in the repo. Short version: the on-call conclusion doesn't
+hold; the relay caused the duplicates, and it also dropped 47 findings that
+night (5 critical, already flagged to Grace and Marco).
+
+Two things I couldn't settle from the packet:
+- kube-events.txt has relative times only. When was it captured?
+- The image the pods pulled is 9.2 MB, but the repo's Dockerfile builds on
+  the full golang image. How does CI actually build it? I want to be sure
+  prod runs this code.
+
+**Assumed to carry on:** prod runs the code in this repository.
+
+---
+
+## 9. To Priya Natarajan (Scanner Platform), cc Ravi Menon
+
+**Time:** 07:04
+**Subject:** Re: findings contract v2: dual-publish from 2 Nov, v1 stops 16 Nov
+
+The reply is in DECISIONS.md ("Reply to Priya"); this is the message as sent.
+
+Hi Priya,
+
+Thanks for the early notice. The shared stream is fine: no FINDINGS_V2.
+
+2 Nov: confirmed. The relay tickets v1 and acks v2 without a ticket, so
+dual-publish creates nothing twice. I've tested this with your preview
+sample.
+
+16 Nov: I can switch the relay to v2 before v1 stops, but one thing blocks it.
+Our open tickets, and AppSec's suppression list, are keyed on the v1
+fingerprint. If the v2 fingerprint isn't derivable, the switch opens a second
+ticket for every open finding (tested: 20 of 20 in your preview). What I need,
+in order of preference:
+
+1. `legacy_fingerprint` (the v1 value) on every v2 message, from 2 Nov until
+   at least 31 Dec. The relay already reads it if present.
+2. If Legal rules that out after 16 Nov: a one-off export mapping v1 to v2
+   fingerprints for every finding open on 16 Nov.
+3. If neither: keep v1 publishing until we have one of the above.
+
+Two more things on the payload:
+- `match_ref` needs the scanner-platform read role and lives 30 days.
+  Ticket readers (AppSec and repo owners) don't have that role, and tickets
+  stay open longer than 30 days. Can AppSec get read access, and can evidence
+  be kept while a ticket is open? For secrets, a masked preview (first 4
+  characters) would tell an engineer which key to rotate without the raw
+  value.
+- Please keep `line` an integer: osv sent `"line": "forty-two"` on 19 Oct.
+
+Could you confirm by Wed 28 Oct?
+
+**Assumed to carry on:** `legacy_fingerprint` arrives under that name. The
+relay stays on v1 until it does.
